@@ -1,9 +1,9 @@
-//
-// Created by Ilya Ostapyshyn on 10/10/18.
-//
-
 #ifndef GRAVITY_PHYSICS_H
 #define GRAVITY_PHYSICS_H
+
+#include <stdbool.h>
+
+#define PARTICLES_MAX 64
 
 void physics_start();
 void physics_stop();
@@ -13,12 +13,21 @@ struct particle {
 };
 
 struct particles {
-    struct particle array[128];
+    struct particle array[PARTICLES_MAX];
     int index;
 } particles;
 
-int flag;
+bool flag;
+bool pause;
+bool force_collect;
 
+int next_m;
+double next_color[3];
+
+void particles_clear();
 float particle_radius(struct particle *p);
+
+void particle_add(double x, double y, double vx, double vy);
+void particle_remove(double x, double y);
 
 #endif //GRAVITY_PHYSICS_H

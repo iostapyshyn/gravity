@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
 #include <GLFW/glfw3.h>
 
 #include "physics.h"
@@ -6,18 +8,79 @@
 #define WIDTH 640
 #define HEIGHT 480
 
+char title[50];
+
 GLFWwindow* window;
+
+struct {
+    bool is_dragging;
+    double xp, yp;
+} mouse = { false };
+
+char *newtitle() {
+    char paused[10] = "*PAUSED*";
+    if (!pause) paused[0] = 0; 
+    sprintf(title, "Gravity | M = %d [%d/%d] %s", next_m, particles.index, PARTICLES_MAX, paused);
+    return title;
+}
 
 void error_callback(int error, const char* desc) {
     fputs(desc, stderr);
 }
 
+/*
+  Z: decrease mass of the next object
+  X: increase mass of the next object
+  C: clear the objects array
+  P: pause
+  D: remove object closest to the mouse cursor
+  G: force garbage collect
+  ESC: quit
+*/
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    } else if (key == GLFW_KEY_Z && (action == GLFW_REPEAT || action == GLFW_PRESS)) {       
+        if (next_m == 1) {
+            next_m = -1;
+        } else {
+            if (next_m > 0) next_m /= 2;
+            if (next_m < 0) next_m *= 2;
+        }
+    } else if (key == GLFW_KEY_X && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+        if (next_m == -1) {
+            next_m = 1;
+        } else {
+            if (next_m > 0) next_m *= 2;
+            if (next_m < 0) next_m /= 2;
+        }
+    } else if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+        particles_clear();
+    } else if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+        pause = !pause;
+    } else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+        double x, y;
+        glfwGetCursorPos(window, &x, &y);    
+        particle_remove(x, y);
+    } else if (key == GLFW_KEY_G && action == GLFW_PRESS) {
+        force_collect = true;
+    }
 }
 
 void mouse_callback(GLFWwindow* window, int button, int action, int mods) {
+    const int vk = 70; // Velocity to mouse vector coefficient
 
+    double x, y;
+    glfwGetCursorPos(window, &x, &y);
+
+    if (action == GLFW_PRESS) {
+        mouse.is_dragging = true;
+        mouse.xp = x;
+        mouse.yp = y;
+    } else {
+        mouse.is_dragging = false;
+        particle_add(x, y, (mouse.xp - x) / vk, (mouse.yp - y) / vk);
+    }
 }
 
 void loop() {
@@ -36,6 +99,7 @@ void loop() {
     physics_start();
 
     while (!glfwWindowShouldClose(window)) {
+        glfwSetWindowTitle(window, newtitle());
         while (flag);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -49,6 +113,19 @@ void loop() {
 
                 glBegin(GL_POINTS);
                 glVertex2d(p->x, p->y);
+                glEnd();
+            }
+
+            if (mouse.is_dragging) {
+                double x, y;
+                glfwGetCursorPos(window, &x, &y);
+
+                glBegin(GL_LINES);
+                glColor3d(next_color[0], next_color[1], next_color[2]);
+                
+                glVertex2d(mouse.xp, mouse.yp);
+                glVertex2d(x, y);
+
                 glEnd();
             }
         }
@@ -70,7 +147,7 @@ int main() {
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, "Gravity | M = ", NULL, NULL);
+    window = glfwCreateWindow(WIDTH, HEIGHT, newtitle(), NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;
