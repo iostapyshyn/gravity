@@ -148,7 +148,7 @@ void loop() {
 }
 
 int main() {
-        glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(error_callback);
 
     if (!glfwInit())
         return -1;
