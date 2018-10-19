@@ -1,0 +1,7 @@
+#ifndef GRAVITY_GRAVITY_H
+#define GRAVITY_GRAVITY_H
+
+#define WIDTH 640
+#define HEIGHT 480
+
+#endif // GRAVITY_GRAVITY_H

@@ -4,9 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "physics.h"
-
-#define WIDTH 640
-#define HEIGHT 480
+#include "gravity.h"
 
 char title[50];
 
@@ -18,9 +16,9 @@ struct {
 } mouse = { false };
 
 char *newtitle() {
-    char paused[10] = "*PAUSED*";
-    if (!pause) paused[0] = 0; 
-    sprintf(title, "Gravity | M = %d [%d/%d] %s", next_m, particles.index, PARTICLES_MAX, paused);
+    char speed[10] = "*PAUSED*";
+    if (!pause) sprintf(speed, "%dms", ms); 
+    sprintf(title, "Gravity | M = %d [%d/%d] %s", next_m, particles.index, PARTICLES_MAX, speed);
     return title;
 }
 
@@ -35,12 +33,14 @@ void error_callback(int error, const char* desc) {
   P: pause
   D: remove object closest to the mouse cursor
   G: force garbage collect
+  A: slow down
+  S: speed up
   ESC: quit
 */
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) { // Close window
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-    } else if (key == GLFW_KEY_Z && (action == GLFW_REPEAT || action == GLFW_PRESS)) {       
+    } else if (key == GLFW_KEY_Z && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
         if (next_m == 1) {
             next_m = -1;
         } else {
@@ -60,10 +60,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         pause = !pause;
     } else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
         double x, y;
-        glfwGetCursorPos(window, &x, &y);    
+        glfwGetCursorPos(window, &x, &y);
         particle_remove(x, y);
     } else if (key == GLFW_KEY_G && action == GLFW_PRESS) {
         force_collect = true;
+    } else if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        if (ms > 1)
+            ms--;
+    } else if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
+        if (ms < 25)
+            ms++;
     }
 }
 
@@ -79,7 +85,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods) {
         mouse.yp = y;
     } else {
         mouse.is_dragging = false;
-        particle_add(x, y, (mouse.xp - x) / vk, (mouse.yp - y) / vk);
+        particle_add((mouse.xp+x)/2, (mouse.yp+y)/2, (mouse.xp - x) / vk, (mouse.yp - y) / vk);
     }
 }
 
@@ -109,10 +115,14 @@ void loop() {
 
             if (p->m) {
                 glPointSize(particle_radius(p) * 2.0f);
-                glColor3d(p->color[0], p->color[1], p->color[2]);
+
+                double x, y;;
+                double alpha = particle_getcoords(*p, &x, &y);
+
+                glColor4d(p->color[0], p->color[1], p->color[2], alpha);
 
                 glBegin(GL_POINTS);
-                glVertex2d(p->x, p->y);
+                glVertex2d(x, y);
                 glEnd();
             }
 
@@ -122,7 +132,7 @@ void loop() {
 
                 glBegin(GL_LINES);
                 glColor3d(next_color[0], next_color[1], next_color[2]);
-                
+
                 glVertex2d(mouse.xp, mouse.yp);
                 glVertex2d(x, y);
 

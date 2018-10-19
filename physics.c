@@ -6,23 +6,23 @@
 #include <pthread.h>
 #include <sys/time.h>
 
+#include "gravity.h"
 #include "physics.h"
 
-#define MS 10
 #define G 1e-4
+
+int ms = 10;
 
 int next_m = 256;
 double next_color[3] = { 0, 0, 0 };
 
-bool running = false;
-
-bool force_collect = false;
-
 /* flag is true when physics thread is busy making changes to the particles array */
 bool flag = false;
-pthread_t thread_id;
-
+bool running = false;
+bool force_collect = false;
 bool pause = false;
+
+pthread_t thread_id;
 
 struct particles particles = {
         .array = {
@@ -61,7 +61,7 @@ double timedifference_msec(struct timeval t0, struct timeval t1)
 
 /* Returns radius of the object in pixels */
 float particle_radius(struct particle *p) {
-    if (p->m < 2 && p->m > 2) return 1.0f;
+    if (p->m < 2 && p->m > -2) return 1.0f;
 
     return (float)(log(fabs(p->m)) / log(2) / 2);
 }
@@ -122,7 +122,7 @@ void *physics_run() {
     while (running) {
         if (!pause) {
             gettimeofday(&t1, 0);
-            delta += timedifference_msec(t0, t1) / MS;
+            delta += timedifference_msec(t0, t1) / ms;
             t0 = t1;
             if (delta >= 1.0) {
                 physics_update();
@@ -151,7 +151,7 @@ void particles_clear() {
     while(flag);
     for (int i = 0; i < PARTICLES_MAX; i++) {
         particles.array[i].m = 0;
-    }                                                
+    }
     particles.index = 0;
 }
 
@@ -169,12 +169,35 @@ void particle_remove(double x, double y) {
     for (int i = 0; i < particles.index; i++) {
         struct particle *p0 = &particles.array[i];
         if (!p0->m) continue;
-        
-        double d = sqrt((p0->x-x) * (p0->x-x) + (p0->y-y) * (p0->y-y));
+
+        double px, py;
+        particle_getcoords(*p0, &px, &py);
+
+        double d = sqrt((px-x) * (px-x) + (py-y) * (py-y));
         if (d<d0) {
             d0 = d;
             closest = i;
         }
     }
     particles.array[closest].m = 0;
+}
+
+double particle_getcoords(struct particle p, double *x, double *y) {
+    double alpha = 1.0;
+    if (p.x > WIDTH) {
+        *x = WIDTH;
+        alpha = 0.5;
+    } else if (p.x < 0) {
+        *x = 0;
+        alpha = 0.5;
+    } else *x = p.x;
+
+    if (p.y > HEIGHT) {
+        *y = HEIGHT;
+        alpha = 0.5;
+    } else if (p.y < 0) {
+        *y = 0;
+        alpha = 0.5;
+    } else *y = p.y;
+    return alpha;
 }
