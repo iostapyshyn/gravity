@@ -17,7 +17,7 @@ make
 Compilation is done using CMake.
 GLFW and OpenGL libraries are required to compile this program.
 
- * [GLFW](http://www.glfw.org)
+ * [GLFW](http://www.glfw.org): Open Source, multi-platform library for OpenGL, OpenGL ES and Vulkan development on the desktop.
 
 ### Controls
 
