@@ -17,20 +17,20 @@ make
 Compilation is done using CMake.
 GLFW and OpenGL libraries are required to compile this program.
 
- * [GLFW](http://www.glfw.org) 
- 
+ * [GLFW](http://www.glfw.org)
+
 ### Keybindings
 
- * Z: decrease mass of the next object
- * X: increase mass of the next object
- * C: clear the objects array
- * P: pause
- * D: remove object closest to the mouse cursor
- * A: slow down
- * S: speed up
- * ESC: quit
- 
+ * Dragging mouse creates new object
+ * `Z`: Decrease mass of the new object
+ * `X`: Increase mass of the new object
+ * `C`: Clear the objects array
+ * `P`: Pause the simulation
+ * `D`: Remove object closest to the mouse cursor
+ * `A`: Slow down the simulation
+ * `S`: Speed up the simulation
+ * `ESC`: Quit
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
- 
