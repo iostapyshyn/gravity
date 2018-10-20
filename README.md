@@ -19,7 +19,7 @@ GLFW and OpenGL libraries are required to compile this program.
 
  * [GLFW](http://www.glfw.org)
 
-### Keybindings
+### Controls
 
  * Dragging mouse creates new object
  * `Z`: Decrease mass of the new object
