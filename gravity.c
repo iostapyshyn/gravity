@@ -17,8 +17,8 @@ struct {
 
 char *newtitle() {
     char speed[10] = "*PAUSED*";
-    if (!pause) sprintf(speed, "%dms", ms); 
-    sprintf(title, "Gravity | M = %d [%d/%d] %s", next_m, particles.index, PARTICLES_MAX, speed);
+    if (!pause) sprintf(speed, "%dms", ms);
+    sprintf(title, "Gravity | M = %d [%d/%d] %s", next_m, count, PARTICLES_MAX, speed);
     return title;
 }
 
@@ -32,7 +32,6 @@ void error_callback(int error, const char* desc) {
   C: clear the objects array
   P: pause
   D: remove object closest to the mouse cursor
-  G: force garbage collect
   A: slow down
   S: speed up
   ESC: quit
@@ -62,8 +61,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         double x, y;
         glfwGetCursorPos(window, &x, &y);
         particle_remove(x, y);
-    } else if (key == GLFW_KEY_G && action == GLFW_PRESS) {
-        force_collect = true;
     } else if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
         if (ms > 1)
             ms--;
@@ -104,44 +101,43 @@ void loop() {
 
     physics_start();
 
-    while (!glfwWindowShouldClose(window)) {
-        glfwSetWindowTitle(window, newtitle());
-        while (flag);
-
+    while (!glfwWindowShouldClose(window) && running) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        for (int i = 0; i < particles.index; i++) {
-            struct particle *p = &particles.array[i];
+        while (flag);
+        for (int i = 0; i < PARTICLES_MAX; i++) {
+            struct particle *p = &array[i];
+            if (!p->m) continue;
 
-            if (p->m) {
-                glPointSize(particle_radius(p) * 2.0f);
+            glPointSize(particle_radius(p) * 2.0f);
 
-                double x, y;;
-                double alpha = particle_getcoords(*p, &x, &y);
+            double x, y;;
+            double alpha = particle_getcoords(*p, &x, &y);
 
-                glColor4d(p->color[0], p->color[1], p->color[2], alpha);
+            glColor4d(p->color[0], p->color[1], p->color[2], alpha);
 
-                glBegin(GL_POINTS);
-                glVertex2d(x, y);
-                glEnd();
-            }
+            glBegin(GL_POINTS);
+            glVertex2d(x, y);
+            glEnd();
+        }
 
-            if (mouse.is_dragging) {
-                double x, y;
-                glfwGetCursorPos(window, &x, &y);
+        if (mouse.is_dragging) {
+            double x, y;
+            glfwGetCursorPos(window, &x, &y);
 
-                glBegin(GL_LINES);
-                glColor3d(next_color[0], next_color[1], next_color[2]);
+            glBegin(GL_LINES);
+            glColor3d(next_color[0], next_color[1], next_color[2]);
 
-                glVertex2d(mouse.xp, mouse.yp);
-                glVertex2d(x, y);
+            glVertex2d(mouse.xp, mouse.yp);
+            glVertex2d(x, y);
 
-                glEnd();
-            }
+            glEnd();
         }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        glfwSetWindowTitle(window, newtitle());
     }
 
     physics_stop();
@@ -157,7 +153,7 @@ int main() {
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, newtitle(), NULL, NULL);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "", NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;

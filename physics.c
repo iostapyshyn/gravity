@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdio.h>
 
 #include <pthread.h>
 #include <sys/time.h>
@@ -12,6 +13,7 @@
 #define G 1e-4
 
 int ms = 10;
+int count = PARTICLES_MAX;
 
 int next_m = 256;
 double next_color[3] = { 0, 0, 0 };
@@ -19,17 +21,16 @@ double next_color[3] = { 0, 0, 0 };
 /* flag is true when physics thread is busy making changes to the particles array */
 bool flag = false;
 bool running = false;
-bool force_collect = false;
 bool pause = false;
 
 pthread_t thread_id;
 
-struct particles particles = {
-        .array = {
-                { .x = 320, .y = 240, .vx = 0, .vy = 0,   .m = 65535, .color = { 1.0, 1.0, 0.0 }},
-                { .x = 360, .y = 240, .vx = 0, .vy = 0.4, .m = 256,   .color = { 1.0, 0.0, 0.0 }},
-                { .x = 250, .y = 240, .vx = 0, .vy = 0.3, .m = 128,   .color = { 0.0, 1.0, 0.5 }}, 0 },
-        .index = 3 };
+struct particle array[] =
+    {
+     { .x = 320, .y = 240, .vx = 0, .vy = 0,   .m = 65535, .color = { 1.0, 1.0, 0.0 }},
+     { .x = 360, .y = 240, .vx = 0, .vy = 0.4, .m = 256,   .color = { 1.0, 0.0, 0.0 }},
+     { .x = 250, .y = 240, .vx = 0, .vy = 0.3, .m = 128,   .color = { 0.0, 1.0, 0.5 }}, 0
+    };
 
 double *new_color() {
     next_color[0] = (rand() % 9 + 1) / 10.0;
@@ -38,19 +39,21 @@ double *new_color() {
     return next_color;
 }
 
-/* Used for qsort */
-int compare(const void *s1, const void *s2) {
-    struct particle *e1 = (struct particle *)s1;
-    struct particle *e2 = (struct particle *)s2;
-    return e2->m - e1->m;
+void update() {
+    count = PARTICLES_MAX;
+    for (int i = 0; i < PARTICLES_MAX; i++) {
+        if (!array[i].m) count--;
+    }
 }
 
-/* Sort objects array and recalculate its size if index exceeds PARTICLES_MAX/2 */
-void garbage_collect() {
-    if (particles.index > PARTICLES_MAX/2 || force_collect) {
-        qsort(particles.array, particles.index, sizeof(struct particle), compare);
-        for (particles.index = 0; particles.array[particles.index].m > 0; particles.index++);
-        force_collect = false;
+bool check() {
+    update();
+    if (count+1 > PARTICLES_MAX) {
+        fputs("Out of memory\n", stderr);
+        running = false;
+        return false;
+    } else {
+        return true;
     }
 }
 
@@ -68,16 +71,16 @@ float particle_radius(struct particle *p) {
 
 /* Update velocities and positions of objects */
 void physics_update() {
-    garbage_collect();
-    for (int i = 0; i < particles.index; i++) {
-        struct particle *p0 = &particles.array[i];
-        for (int j = 0; j < particles.index; j++) {
-            struct particle *p = &particles.array[j];
-            if (i == j || p->m == 0 || p0->m == 0) continue;
+    for (int i = 0; i < PARTICLES_MAX; i++) {
+        struct particle *p0 = &array[i];
+        if (!p0->m) continue;
+        for (int j = 0; j < PARTICLES_MAX; j++) {
+            struct particle *p = &array[j];
+            if (!p->m) continue;
+
+            if (i == j) continue;
 
             double d = sqrt((p0->x-p->x) * (p0->x-p->x) + (p0->y-p->y) * (p0->y-p->y));
-
-            flag = 1;
 
             if (particle_radius(p0) + particle_radius(p) < d) {
                 /* Update velocity of the object p0 */
@@ -99,15 +102,16 @@ void physics_update() {
                 p0->m=0;
                 p->m=0;
 
-                particles.array[particles.index] = new;
-                particles.index++;
+                if (check()) {
+                    int i;
+                    for (i = 0; array[i].m; i++); /* Get index of empty array element */
+                    array[i] = new;
 
-                flag = 0;
+                    update();
+                }
 
                 return;
             }
-
-            flag = 0;
         }
         /* Update x and y coordinates of the object p0 */
         p0->x += p0->vx;
@@ -125,7 +129,10 @@ void *physics_run() {
             delta += timedifference_msec(t0, t1) / ms;
             t0 = t1;
             if (delta >= 1.0) {
+                while(flag);
+                flag = true;
                 physics_update();
+                flag = false;
                 delta--;
             }
         } else gettimeofday(&t0, 0);
@@ -135,11 +142,16 @@ void *physics_run() {
 
 /* Those functions are called from main thread */
 void physics_start() {
+    running = true;
+
     srand(time(NULL));
     new_color();
 
-    running = true;
+    update();
+
     pthread_create(&thread_id, NULL, physics_run, NULL);
+
+    while (!running);
 }
 
 void physics_stop() {
@@ -149,25 +161,44 @@ void physics_stop() {
 
 void particles_clear() {
     while(flag);
+    flag = true;
+
     for (int i = 0; i < PARTICLES_MAX; i++) {
-        particles.array[i].m = 0;
+        array[i].m = 0;
     }
-    particles.index = 0;
+
+    update();
+    flag = false;
 }
 
 void particle_add(double x, double y, double vx, double vy) {
     while (flag);
-    particles.array[particles.index] = (struct particle){ x, y, vx, vy, next_m, { next_color[0], next_color[1], next_color[2] } };
-    particles.index++;
+
+    if (check()) {
+        flag = true;
+
+        int i;
+        for (i = 0; array[i].m; i++); /* Get index of empty array element */
+        array[i] = (struct particle){ x, y, vx, vy, next_m, { next_color[0], next_color[1], next_color[2] } };
+
+        update();
+        flag = false;
+    }
+
     new_color();
+
 }
 
 void particle_remove(double x, double y) {
     int closest = 0;
     double d0 = +INFINITY;
+
     while (flag);
-    for (int i = 0; i < particles.index; i++) {
-        struct particle *p0 = &particles.array[i];
+
+    flag = true;
+
+    for (int i = 0; i < PARTICLES_MAX; i++) {
+        struct particle *p0 = &array[i];
         if (!p0->m) continue;
 
         double px, py;
@@ -179,7 +210,10 @@ void particle_remove(double x, double y) {
             closest = i;
         }
     }
-    particles.array[closest].m = 0;
+    array[closest].m = 0;
+
+    update();
+    flag = false;
 }
 
 double particle_getcoords(struct particle p, double *x, double *y) {

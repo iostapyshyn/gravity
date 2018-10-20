@@ -3,25 +3,21 @@
 
 #include <stdbool.h>
 
-#define PARTICLES_MAX 64
+#define PARTICLES_MAX 120
 
 void physics_start();
 void physics_stop();
 
 struct particle {
     double x, y, vx, vy, m, color[3];
-};
-
-struct particles {
-    struct particle array[PARTICLES_MAX];
-    int index;
-} particles;
+} array[PARTICLES_MAX];
 
 bool flag;
 bool pause;
-bool force_collect;
+bool running;
 
 int ms;
+int count;
 
 int next_m;
 double next_color[3];
