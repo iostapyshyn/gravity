@@ -6,5 +6,7 @@ set(CMAKE_C_STANDARD 99)
 add_executable(gravity gravity.c physics.c physics.h)
 
 find_package(OpenGL REQUIRED)
+find_package(glfw3 3.2 REQUIRED)
+
 target_link_libraries(gravity glfw)
-target_link_libraries(gravity ${OPENGL_glu_LIBRARY})
+target_link_libraries(gravity ${OPENGL_gl_LIBRARY})
