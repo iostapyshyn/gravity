@@ -4,7 +4,6 @@ Simulation of Newton's law of universal gravitation written in C language.
 ![program window](screenshot.png?raw=true)
 
 ## Usage
-
 ### Compiling
 
 ```
@@ -18,9 +17,8 @@ Compilation is done using CMake.
 GLFW and OpenGL libraries are required to compile this program.
 
  * [GLFW](http://www.glfw.org): Open Source, multi-platform library for OpenGL, OpenGL ES and Vulkan development on the desktop.
-
+ 
 ### Controls
-
  * Dragging mouse creates new object
  * `Z`: Decrease mass of the new object
  * `X`: Increase mass of the new object
@@ -32,5 +30,4 @@ GLFW and OpenGL libraries are required to compile this program.
  * `ESC`: Quit
 
 ## License
-
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
