@@ -12,7 +12,6 @@ struct particle {
     double x, y, vx, vy, m, color[3];
 } array[PARTICLES_MAX];
 
-bool flag;
 bool pause;
 bool running;
 
@@ -21,6 +20,8 @@ int count;
 
 int next_m;
 double next_color[3];
+
+pthread_mutex_t lock;
 
 void particles_clear();
 float particle_radius(struct particle *p);

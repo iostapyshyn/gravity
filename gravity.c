@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <GLFW/glfw3.h>
+#include <pthread.h>
 
 #include "physics.h"
 #include "gravity.h"
@@ -104,7 +105,7 @@ void loop() {
     while (!glfwWindowShouldClose(window) && running) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        while (flag);
+        pthread_mutex_lock(&lock);
         for (int i = 0; i < PARTICLES_MAX; i++) {
             struct particle *p = &array[i];
             if (!p->m) continue;
@@ -120,13 +121,14 @@ void loop() {
             glVertex2d(x, y);
             glEnd();
         }
+        pthread_mutex_unlock(&lock);
 
         if (mouse.is_dragging) {
             double x, y;
             glfwGetCursorPos(window, &x, &y);
 
             glBegin(GL_LINES);
-            glColor3d(next_color[0], next_color[1], next_color[2]);
+            glColor3dv(next_color);
 
             glVertex2d(mouse.xp, mouse.yp);
             glVertex2d(x, y);

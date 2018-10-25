@@ -19,11 +19,11 @@ int next_m = 256;
 double next_color[3] = { 0, 0, 0 };
 
 /* flag is true when physics thread is busy making changes to the particles array */
-bool flag = false;
 bool running = false;
 bool pause = false;
 
 pthread_t thread_id;
+pthread_mutex_t lock;
 
 struct particle array[] =
     {
@@ -82,10 +82,12 @@ void physics_update() {
 
             double d = sqrt((p0->x-p->x) * (p0->x-p->x) + (p0->y-p->y) * (p0->y-p->y));
 
+            pthread_mutex_lock(&lock);
             if (particle_radius(p0) + particle_radius(p) < d) {
                 /* Update velocity of the object p0 */
                 p0->vx += ((G * p->m) / (d * d)) * ((p->x - p0->x) / d);
                 p0->vy += ((G * p->m) / (d * d)) * ((p->y - p0->y) / d);
+                pthread_mutex_unlock(&lock);
             } else {
                 /* Collision, new object is created */
                 struct particle new;
@@ -110,6 +112,7 @@ void physics_update() {
                     update();
                 }
 
+                pthread_mutex_unlock(&lock);
                 return;
             }
         }
@@ -120,6 +123,7 @@ void physics_update() {
 }
 
 void *physics_run() {
+    running = true;
     struct timeval t0, t1;
     gettimeofday(&t0, 0);
     double delta = 0.0;
@@ -129,10 +133,7 @@ void *physics_run() {
             delta += timedifference_msec(t0, t1) / ms;
             t0 = t1;
             if (delta >= 1.0) {
-                while(flag);
-                flag = true;
                 physics_update();
-                flag = false;
                 delta--;
             }
         } else gettimeofday(&t0, 0);
@@ -142,14 +143,19 @@ void *physics_run() {
 
 /* Those functions are called from main thread */
 void physics_start() {
-    running = true;
-
     srand(time(NULL));
     new_color();
 
     update();
 
-    pthread_create(&thread_id, NULL, physics_run, NULL);
+    if (pthread_mutex_init(&lock, NULL) != 0) {
+        fprintf(stderr, "phtread_mutex_init failed\n");
+        return;
+    }
+    if (pthread_create(&thread_id, NULL, physics_run, NULL) != 0) {
+        fprintf(stderr, "phtread_create failed\n");
+        return;
+    }
 
     while (!running);
 }
@@ -157,45 +163,42 @@ void physics_start() {
 void physics_stop() {
     running = false;
     pthread_join(thread_id, NULL);
+    pthread_mutex_destroy(&lock);
 }
 
 void particles_clear() {
-    while(flag);
-    flag = true;
+    pthread_mutex_lock(&lock);
 
     for (int i = 0; i < PARTICLES_MAX; i++) {
         array[i].m = 0;
     }
 
+    pthread_mutex_unlock(&lock);
+
     update();
-    flag = false;
 }
 
 void particle_add(double x, double y, double vx, double vy) {
-    while (flag);
+    pthread_mutex_lock(&lock);
 
     if (check()) {
-        flag = true;
-
         int i;
         for (i = 0; array[i].m; i++); /* Get index of empty array element */
         array[i] = (struct particle){ x, y, vx, vy, next_m, { next_color[0], next_color[1], next_color[2] } };
-
-        update();
-        flag = false;
     }
 
-    new_color();
+    pthread_mutex_unlock(&lock);
 
+    update();
+
+    new_color();
 }
 
 void particle_remove(double x, double y) {
     int closest = 0;
     double d0 = +INFINITY;
 
-    while (flag);
-
-    flag = true;
+    pthread_mutex_lock(&lock);
 
     for (int i = 0; i < PARTICLES_MAX; i++) {
         struct particle *p0 = &array[i];
@@ -212,8 +215,9 @@ void particle_remove(double x, double y) {
     }
     array[closest].m = 0;
 
+    pthread_mutex_unlock(&lock);
+
     update();
-    flag = false;
 }
 
 double particle_getcoords(struct particle p, double *x, double *y) {
