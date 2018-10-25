@@ -105,23 +105,24 @@ void loop() {
     while (!glfwWindowShouldClose(window) && running) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        pthread_mutex_lock(&lock);
-        for (int i = 0; i < PARTICLES_MAX; i++) {
-            struct particle *p = &array[i];
-            if (!p->m) continue;
+        if (pthread_mutex_trylock(&lock) == 0) {
+            for (int i = 0; i < PARTICLES_MAX; i++) {
+                struct particle *p = &array[i];
+                if (!p->m) continue;
+                
+                glPointSize(particle_radius(p) * 2.0f);
 
-            glPointSize(particle_radius(p) * 2.0f);
+                double x, y;;
+                double alpha = particle_getcoords(*p, &x, &y);
 
-            double x, y;;
-            double alpha = particle_getcoords(*p, &x, &y);
-
-            glColor4d(p->color[0], p->color[1], p->color[2], alpha);
-
-            glBegin(GL_POINTS);
-            glVertex2d(x, y);
-            glEnd();
+                glColor4d(p->color[0], p->color[1], p->color[2], alpha);
+                
+                glBegin(GL_POINTS);
+                glVertex2d(x, y);
+                glEnd();
+            }
+            pthread_mutex_unlock(&lock);
         }
-        pthread_mutex_unlock(&lock);
 
         if (mouse.is_dragging) {
             double x, y;
