@@ -112,7 +112,7 @@ void loop() {
                 
                 glPointSize(particle_radius(p) * 2.0f);
 
-                double x, y;;
+                double x, y;
                 double alpha = particle_getcoords(*p, &x, &y);
 
                 glColor4d(p->color[0], p->color[1], p->color[2], alpha);
