@@ -82,12 +82,10 @@ void physics_update() {
 
             double d = sqrt((p0->x-p->x) * (p0->x-p->x) + (p0->y-p->y) * (p0->y-p->y));
 
-            pthread_mutex_lock(&lock);
             if (particle_radius(p0) + particle_radius(p) < d) {
                 /* Update velocity of the object p0 */
                 p0->vx += ((G * p->m) / (d * d)) * ((p->x - p0->x) / d);
                 p0->vy += ((G * p->m) / (d * d)) * ((p->y - p0->y) / d);
-                pthread_mutex_unlock(&lock);
             } else {
                 /* Collision, new object is created */
                 struct particle new;
@@ -101,6 +99,7 @@ void physics_update() {
                 new.color[1] = (p0->m * p0->color[1] + p->m * p->color[1]) / (p0->m + p->m);
                 new.color[2] = (p0->m * p0->color[2] + p->m * p->color[2]) / (p0->m + p->m);
 
+                pthread_mutex_lock(&lock);
                 p0->m=0;
                 p->m=0;
 
@@ -117,8 +116,10 @@ void physics_update() {
             }
         }
         /* Update x and y coordinates of the object p0 */
+        pthread_mutex_lock(&lock);
         p0->x += p0->vx;
         p0->y += p0->vy;
+        pthread_mutex_unlock(&lock);
     }
 }
 
