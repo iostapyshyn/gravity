@@ -1,5 +1,5 @@
 # Gravity
-Simulation of Newton's law of universal gravitation written in C language.
+Simulation of Newton's law of universal gravitation written in C + fixed function pipeline OpenGL.
 
 ![program window](screenshot.png?raw=true)
 
