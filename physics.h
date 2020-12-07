@@ -2,6 +2,7 @@
 #define GRAVITY_PHYSICS_H
 
 #include <stdbool.h>
+#include <pthread.h>
 
 #define PARTICLES_MAX 120
 
