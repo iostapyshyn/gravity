@@ -7,8 +7,6 @@
 #include "physics.h"
 #include "gravity.h"
 
-#define GL_SILENCE_DEPRECATION
-
 char title[50];
 
 GLFWwindow* window;

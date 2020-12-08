@@ -4,6 +4,7 @@ project(gravity C)
 set(CMAKE_C_STANDARD 99)
 
 add_executable(gravity gravity.c physics.c physics.h gravity.h)
+add_definitions(-DGL_SILENCE_DEPRECATION)
 
 find_package(OpenGL REQUIRED)
 find_package(glfw3 3.2 REQUIRED)
