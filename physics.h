@@ -9,20 +9,20 @@
 void physics_start();
 void physics_stop();
 
-struct particle {
+extern struct particle {
     double x, y, vx, vy, m, color[3];
 } array[PARTICLES_MAX];
 
-bool pause;
-bool running;
+extern bool pause;
+extern bool running;
 
-int ms;
-int count;
+extern int ms;
+extern int count;
 
-int next_m;
-double next_color[3];
+extern int next_m;
+extern double next_color[3];
 
-pthread_mutex_t lock;
+extern pthread_mutex_t lock;
 
 void particles_clear();
 float particle_radius(struct particle *p);
